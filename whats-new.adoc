@@ -12,6 +12,18 @@ Describes the new features and capabilities added to Hibernate ORM in {version}.
 
 IMPORTANT: If migrating from earlier versions, be sure to also check out the link:{migrationGuide}[Migration Guide] for discussion of impactful changes.
 
+
+[[current-auditor-value-generation]]
+== Current auditor value generation
+
+Hibernate ORM can now populate application-defined auditor attributes using `@CreatedBy` and
+`@LastModifiedBy`. Applications provide a generic `CurrentAuditorResolver`, keeping authentication
+and identity lookup outside Hibernate ORM while allowing values to come from a security context,
+service account, scheduled job, or another application-specific source.
+
+`@CreatedBy` generates on insert and `@LastModifiedBy` generates on insert and update.
+See the link:{userGuideBase}#mapping-generated-auditor[user guide] for configuration and examples.
+
 [[to-one-association-restrictions]]
 == Restrictions on to-one associations
 
