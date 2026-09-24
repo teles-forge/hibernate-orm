@@ -314,6 +314,7 @@ Current branch updates:
 
 * documentation/src/main/asciidoc/userguide/chapters/domain/basic_types.adoc
 * documentation/src/main/asciidoc/introduction/Advanced.adoc
+* whats-new.adoc
 * Javadocs on the two annotations, resolver, and setting
 
 The user guide must explain:
@@ -326,7 +327,7 @@ The user guide must explain:
 * type requirements;
 * generated-property scope.
 
-Do not add release-note or migration-guide text unless maintainers request it. This is a new feature with no migration requirement.
+A short What's New entry is appropriate for this public additive feature. Do not add a migration-guide entry unless maintainers request it, because there is no migration requirement or incompatible behavior.
 
 ## Required verification before PR
 
