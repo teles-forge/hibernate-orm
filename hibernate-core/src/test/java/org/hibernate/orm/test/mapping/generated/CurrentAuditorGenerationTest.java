@@ -29,6 +29,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DomainModel(annotatedClasses = {
 		CurrentAuditorGenerationTest.AuditedEntity.class,
@@ -43,11 +44,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SessionFactory
 public class CurrentAuditorGenerationTest {
 	private static final ThreadLocal<String> CURRENT_AUDITOR = new ThreadLocal<>();
+	private static final ThreadLocal<RuntimeException> RESOLVER_FAILURE = new ThreadLocal<>();
 	private static final AtomicInteger RESOLVER_INSTANTIATIONS = new AtomicInteger();
 
 	@AfterEach
 	void clearCurrentAuditor() {
 		CURRENT_AUDITOR.remove();
+		RESOLVER_FAILURE.remove();
 	}
 
 	@AfterAll
@@ -234,6 +237,18 @@ public class CurrentAuditorGenerationTest {
 	}
 
 	@Test
+	void resolverFailureIsNotSwallowed(SessionFactoryScope scope) {
+		final var failure = new IllegalStateException( "auditor unavailable" );
+		RESOLVER_FAILURE.set( failure );
+
+		assertThatThrownBy(
+				() -> scope.inTransaction( session -> session.persist( new AuditedEntity( 11L, "initial" ) ) )
+		)
+				.hasRootCauseInstanceOf( IllegalStateException.class )
+				.hasRootCauseMessage( "auditor unavailable" );
+	}
+
+	@Test
 	void embeddableAuditFieldsAreAudited(SessionFactoryScope scope) {
 		CURRENT_AUDITOR.set( "alice" );
 		scope.inTransaction( session -> session.persist( new EmbeddedAuditedEntity( 10L, "initial" ) ) );
@@ -259,6 +274,10 @@ public class CurrentAuditorGenerationTest {
 
 		@Override
 		public String resolveCurrentAuditor() {
+			final var failure = RESOLVER_FAILURE.get();
+			if ( failure != null ) {
+				throw failure;
+			}
 			return CURRENT_AUDITOR.get();
 		}
 	}
