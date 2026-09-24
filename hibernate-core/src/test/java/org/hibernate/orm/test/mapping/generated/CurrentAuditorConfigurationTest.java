@@ -67,6 +67,7 @@ public class CurrentAuditorConfigurationTest {
 					.addAnnotatedClass( annotatedClass )
 					.buildMetadata()
 					.buildSessionFactory() ) {
+				assertThat( sessionFactory ).isOpen();
 			}
 		}
 	}
