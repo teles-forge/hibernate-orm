@@ -849,6 +849,8 @@ Hibernate has a range of built-in generators which are defined in terms of this 
 | link:{doc-javadoc-url}org/hibernate/annotations/CurrentTimestamp.html[`@CurrentTimestamp`] | `CurrentTimestampGeneration` | Generic support for database or in-memory generation of creation or update timestamps
 | link:{doc-javadoc-url}org/hibernate/annotations/CreationTimestamp.html[`@CreationTimestamp`] | `CurrentTimestampGeneration` | A timestamp generated when an entity is first made persistent
 | link:{doc-javadoc-url}org/hibernate/annotations/UpdateTimestamp.html[`@UpdateTimestamp`] | `CurrentTimestampGeneration` | A timestamp generated when an entity is made persistent, and regenerated every time the entity is modified
+| link:{doc-javadoc-url}org/hibernate/annotations/CreatedBy.html[`@CreatedBy`] | `CurrentAuditorGeneration` | An application-defined auditor generated when an entity is first made persistent
+| link:{doc-javadoc-url}org/hibernate/annotations/LastModifiedBy.html[`@LastModifiedBy`] | `CurrentAuditorGeneration` | An application-defined auditor generated when an entity is made persistent, and regenerated every time the entity is modified
 | link:{doc-javadoc-url}org/hibernate/annotations/UuidGenerator.html[`@UuidGenerator`] | `UuidGenerator` | A more flexible generator for RFC 4122 UUIDs
 |===
 

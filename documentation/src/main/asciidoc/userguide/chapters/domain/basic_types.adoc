@@ -2482,6 +2482,7 @@ Hibernate supports multiple ways to mark an attribute as generated:
     * `@CurrentTimestamp` - <<mapping-generated-CurrentTimestamp>>
     * `@CreationTimestamp` - <<mapping-generated-CreationTimestamp>>
     * `@UpdateTimestamp` - <<mapping-generated-UpdateTimestamp>>
+    * `@CreatedBy` and `@LastModifiedBy` - <<mapping-generated-auditor>>
     * `@Generated` - <<mapping-generated-Generated>>
 * Using a custom generation strategy - <<mapping-generated-custom>>
 
@@ -2541,6 +2542,45 @@ include::{example-dir-basic-mapping}/generated/UpdateTimestampTest.java[tags=map
 ----
 ====
 
+
+
+[[mapping-generated-auditor]]
+===== `@CreatedBy` and `@LastModifiedBy`
+
+The `@CreatedBy` and `@LastModifiedBy` annotations generate application-defined auditor values in memory.
+
+`@CreatedBy`:: generates the auditor when an entity is inserted.
+`@LastModifiedBy`:: generates the auditor when an entity is inserted and whenever the entity is updated.
+
+Hibernate deliberately has no concept of a "current user".
+Instead, applications configure a
+link:{doc-javadoc-url}org/hibernate/context/spi/CurrentAuditorResolver.html[`CurrentAuditorResolver`]
+using the `hibernate.audit.current_auditor_resolver` setting.
+The resolver may obtain the auditor from a security context, service account, scheduled job, or any other
+application-specific source.
+
+A resolver may be configured as an instance, a resolver implementation class, or the fully-qualified name
+of a resolver implementation class. Class-based resolver implementations are acquired through Hibernate's
+managed bean registry.
+
+[[mapping-generated-auditor-example]]
+.Auditor generation example
+====
+[source, java, indent=0]
+----
+include::{example-dir-basic-mapping}/generated/CurrentAuditorGenerationTest.java[tags=mapping-generated-auditor-example]
+----
+====
+
+Auditor properties follow the same restrictions as other generated properties in this section and therefore
+must be basic-valued attributes. The resolver's value must be assignable to the Java type of the annotated property.
+
+If no resolver is configured, using `@CreatedBy` or `@LastModifiedBy` is a mapping error.
+If the configured resolver returns `null`, Hibernate interprets this as no auditor being available for the
+current operation and leaves the current property value unchanged. Hibernate does not invent fallback values
+such as `system` or `anonymous`.
+
+When a non-null auditor is available, it replaces any explicitly assigned value for the generated property.
 
 
 [[mapping-generated-Generated]]
