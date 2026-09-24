@@ -6,6 +6,7 @@ package org.hibernate.cfg;
 
 import org.hibernate.Incubating;
 import org.hibernate.audit.AuditStrategy;
+import org.hibernate.context.spi.CurrentAuditorResolver;
 import org.hibernate.temporal.TemporalTableStrategy;
 import org.hibernate.temporal.spi.ChangesetCoordinator;
 import org.hibernate.temporal.spi.ChangesetIdentifierSupplier;
@@ -95,6 +96,27 @@ public interface StateManagementSettings {
 	 * @since 7.4
 	 */
 	String CHANGESET_ID_SUPPLIER = "hibernate.temporal.changeset_id_supplier";
+
+	/**
+	 * Specifies the {@link CurrentAuditorResolver} used to obtain the auditor value
+	 * for properties annotated with {@link org.hibernate.annotations.CreatedBy}
+	 * or {@link org.hibernate.annotations.LastModifiedBy}.
+	 * <p>
+	 * Accepts any of:
+	 * <ul>
+	 *     <li>an instance of {@code CurrentAuditorResolver},
+	 *     <li>a {@link Class} representing a class that implements {@code CurrentAuditorResolver}, or
+	 *     <li>the name of a class that implements {@code CurrentAuditorResolver}.
+	 * </ul>
+	 *
+	 * @see CurrentAuditorResolver
+	 * @see org.hibernate.annotations.CreatedBy
+	 * @see org.hibernate.annotations.LastModifiedBy
+	 *
+	 * @since 8.1
+	 */
+	@Incubating(since = "8.1")
+	String CURRENT_AUDITOR_RESOLVER = "hibernate.audit.current_auditor_resolver";
 
 	/**
 	 * Specifies the audit strategy for
