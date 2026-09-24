@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test;
 
 import jakarta.persistence.Access;
 import jakarta.persistence.AccessType;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
@@ -31,7 +33,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DomainModel(annotatedClasses = {
 		CurrentAuditorGenerationTest.AuditedEntity.class,
 		CurrentAuditorGenerationTest.InheritedAuditedEntity.class,
-		CurrentAuditorGenerationTest.PropertyAccessAuditedEntity.class
+		CurrentAuditorGenerationTest.PropertyAccessAuditedEntity.class,
+		CurrentAuditorGenerationTest.EmbeddedAuditedEntity.class
 })
 @ServiceRegistry(settings = @Setting(
 		name = StateManagementSettings.CURRENT_AUDITOR_RESOLVER,
@@ -230,6 +233,24 @@ public class CurrentAuditorGenerationTest {
 		} );
 	}
 
+	@Test
+	void embeddableAuditFieldsAreAudited(SessionFactoryScope scope) {
+		CURRENT_AUDITOR.set( "alice" );
+		scope.inTransaction( session -> session.persist( new EmbeddedAuditedEntity( 10L, "initial" ) ) );
+
+		CURRENT_AUDITOR.set( "bob" );
+		scope.inTransaction( session -> {
+			final var entity = session.find( EmbeddedAuditedEntity.class, 10L );
+			entity.name = "updated";
+		} );
+
+		scope.inTransaction( session -> {
+			final var entity = session.find( EmbeddedAuditedEntity.class, 10L );
+			assertThat( entity.audit.createdBy ).isEqualTo( "alice" );
+			assertThat( entity.audit.lastModifiedBy ).isEqualTo( "bob" );
+		} );
+	}
+
 	//tag::mapping-generated-auditor-example[]
 	public static class TestCurrentAuditorResolver implements CurrentAuditorResolver<String> {
 		public TestCurrentAuditorResolver() {
@@ -285,6 +306,34 @@ public class CurrentAuditorGenerationTest {
 		}
 
 		public InheritedAuditedEntity(Long id, String name) {
+			this.id = id;
+			this.name = name;
+		}
+	}
+
+	@Embeddable
+	public static class AuditMetadata {
+		@CreatedBy
+		String createdBy;
+
+		@LastModifiedBy
+		String lastModifiedBy;
+	}
+
+	@Entity(name = "EmbeddedAuditedEntity")
+	public static class EmbeddedAuditedEntity {
+		@Id
+		private Long id;
+
+		private String name;
+
+		@Embedded
+		private AuditMetadata audit = new AuditMetadata();
+
+		public EmbeddedAuditedEntity() {
+		}
+
+		public EmbeddedAuditedEntity(Long id, String name) {
 			this.id = id;
 			this.name = name;
 		}
