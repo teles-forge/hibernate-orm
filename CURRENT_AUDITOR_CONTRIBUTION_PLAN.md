@@ -207,6 +207,8 @@ The resolver SPI is incubating and classified for IMPLEMENT and SUPPLY. The gene
 * Stateful Session is covered.
 * StatelessSession is covered.
 * Merge of a detached entity is covered.
+* Embeddable audit attributes are covered.
+* Resolver exceptions are verified to propagate instead of being swallowed.
 
 ## Deliberate scope limits
 
