@@ -266,7 +266,6 @@ public class CurrentAuditorGenerationTest {
 		} );
 	}
 
-	//tag::mapping-generated-auditor-example[]
 	public static class TestCurrentAuditorResolver implements CurrentAuditorResolver<String> {
 		public TestCurrentAuditorResolver() {
 			RESOLVER_INSTANTIATIONS.incrementAndGet();
@@ -282,6 +281,7 @@ public class CurrentAuditorGenerationTest {
 		}
 	}
 
+	//tag::mapping-generated-auditor-example[]
 	@Entity(name = "AuditedEntity")
 	public static class AuditedEntity {
 		@Id
