@@ -7,8 +7,12 @@ package org.hibernate.context.spi;
 import jakarta.annotation.Nullable;
 
 import org.hibernate.Incubating;
+import org.hibernate.SPI;
 import org.hibernate.SharedSessionContract;
 import org.hibernate.cfg.StateManagementSettings;
+
+import static org.hibernate.SPI.Role.IMPLEMENT;
+import static org.hibernate.SPI.Role.SUPPLY;
 
 /**
  * A callback responsible for resolving the auditor associated with the current
@@ -35,6 +39,7 @@ import org.hibernate.cfg.StateManagementSettings;
  * @since 8.1
  */
 @Incubating(since = "8.1")
+@SPI({ IMPLEMENT, SUPPLY })
 public interface CurrentAuditorResolver<T> {
 
 	/**
