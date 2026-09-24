@@ -23,6 +23,10 @@ import static org.hibernate.SPI.Role.SUPPLY;
  * use a security context, a service account, a scheduled-job identity, or any
  * other application-specific source.
  * <p>
+ * When a resolver implementation is configured by class or class name, Hibernate
+ * acquires it through the managed bean registry and reuses the managed instance.
+ * Supplying a resolver instance uses that instance directly.
+ * <p>
  * A resolver must be configured when using
  * {@link org.hibernate.annotations.CreatedBy @CreatedBy} or
  * {@link org.hibernate.annotations.LastModifiedBy @LastModifiedBy}. Returning

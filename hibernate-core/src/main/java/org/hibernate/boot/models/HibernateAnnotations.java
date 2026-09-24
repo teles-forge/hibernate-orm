@@ -271,6 +271,12 @@ public interface HibernateAnnotations {
 			false,
 			CONVERTER_REGISTRATIONS
 	);
+	OrmAnnotationDescriptor<CreatedBy, CreatedByAnnotation> CREATED_BY = new OrmAnnotationDescriptor<>(
+			CreatedBy.class,
+			CreatedByAnnotation.class,
+			EnumSet.of( Kind.METHOD, Kind.FIELD ),
+			false
+	);
 	OrmAnnotationDescriptor<CreationTimestamp, CreationTimestampAnnotation> CREATION_TIMESTAMP = new OrmAnnotationDescriptor<>(
 			CreationTimestamp.class,
 			CreationTimestampAnnotation.class,
@@ -522,6 +528,12 @@ public interface HibernateAnnotations {
 	OrmAnnotationDescriptor<JoinFormula, JoinFormulaAnnotation> JOIN_FORMULA = new OrmAnnotationDescriptor<>(
 			JoinFormula.class,
 			JoinFormulaAnnotation.class,
+			EnumSet.of( Kind.METHOD, Kind.FIELD ),
+			false
+	);
+	OrmAnnotationDescriptor<LastModifiedBy, LastModifiedByAnnotation> LAST_MODIFIED_BY = new OrmAnnotationDescriptor<>(
+			LastModifiedBy.class,
+			LastModifiedByAnnotation.class,
 			EnumSet.of( Kind.METHOD, Kind.FIELD ),
 			false
 	);

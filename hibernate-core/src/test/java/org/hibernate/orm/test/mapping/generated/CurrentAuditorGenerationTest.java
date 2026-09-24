@@ -4,6 +4,8 @@
  */
 package org.hibernate.orm.test.mapping.generated;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.hibernate.annotations.CreatedBy;
 import org.hibernate.annotations.LastModifiedBy;
 import org.hibernate.cfg.StateManagementSettings;
@@ -14,9 +16,12 @@ import org.hibernate.testing.orm.junit.ServiceRegistry;
 import org.hibernate.testing.orm.junit.SessionFactory;
 import org.hibernate.testing.orm.junit.SessionFactoryScope;
 import org.hibernate.testing.orm.junit.Setting;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import jakarta.persistence.Access;
+import jakarta.persistence.AccessType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
@@ -25,7 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DomainModel(annotatedClasses = {
 		CurrentAuditorGenerationTest.AuditedEntity.class,
-		CurrentAuditorGenerationTest.InheritedAuditedEntity.class
+		CurrentAuditorGenerationTest.InheritedAuditedEntity.class,
+		CurrentAuditorGenerationTest.PropertyAccessAuditedEntity.class
 })
 @ServiceRegistry(settings = @Setting(
 		name = StateManagementSettings.CURRENT_AUDITOR_RESOLVER,
@@ -34,10 +40,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SessionFactory
 public class CurrentAuditorGenerationTest {
 	private static final ThreadLocal<String> CURRENT_AUDITOR = new ThreadLocal<>();
+	private static final AtomicInteger RESOLVER_INSTANTIATIONS = new AtomicInteger();
 
 	@AfterEach
 	void clearCurrentAuditor() {
 		CURRENT_AUDITOR.remove();
+	}
+
+	@AfterAll
+	static void resolverIsManagedAsOneInstance() {
+		assertThat( RESOLVER_INSTANTIATIONS ).hasValue( 1 );
 	}
 
 	@Test
@@ -97,10 +109,17 @@ public class CurrentAuditorGenerationTest {
 			session.persist( entity );
 		} );
 
+		CURRENT_AUDITOR.set( "bob" );
+		scope.inTransaction( session -> {
+			final var entity = session.find( AuditedEntity.class, 3L );
+			entity.name = "updated";
+			entity.lastModifiedBy = "manual-update";
+		} );
+
 		scope.inTransaction( session -> {
 			final var entity = session.find( AuditedEntity.class, 3L );
 			assertThat( entity.createdBy ).isEqualTo( "alice" );
-			assertThat( entity.lastModifiedBy ).isEqualTo( "alice" );
+			assertThat( entity.lastModifiedBy ).isEqualTo( "bob" );
 		} );
 	}
 
@@ -156,7 +175,48 @@ public class CurrentAuditorGenerationTest {
 		} );
 	}
 
+	@Test
+	void propertyAccessAnnotationsAreAudited(SessionFactoryScope scope) {
+		CURRENT_AUDITOR.set( "alice" );
+		scope.inTransaction( session -> session.persist( new PropertyAccessAuditedEntity( 7L, "initial" ) ) );
+
+		CURRENT_AUDITOR.set( "bob" );
+		scope.inTransaction( session -> {
+			final var entity = session.find( PropertyAccessAuditedEntity.class, 7L );
+			entity.setName( "updated" );
+		} );
+
+		scope.inTransaction( session -> {
+			final var entity = session.find( PropertyAccessAuditedEntity.class, 7L );
+			assertThat( entity.getCreatedBy() ).isEqualTo( "alice" );
+			assertThat( entity.getLastModifiedBy() ).isEqualTo( "bob" );
+		} );
+	}
+
+	@Test
+	void mergeUsesCurrentAuditor(SessionFactoryScope scope) {
+		CURRENT_AUDITOR.set( "alice" );
+		scope.inTransaction( session -> session.persist( new AuditedEntity( 8L, "initial" ) ) );
+
+		final AuditedEntity detached = scope.fromTransaction( session -> session.find( AuditedEntity.class, 8L ) );
+		detached.name = "updated";
+
+		CURRENT_AUDITOR.set( "bob" );
+		scope.inTransaction( session -> session.merge( detached ) );
+
+		scope.inTransaction( session -> {
+			final var entity = session.find( AuditedEntity.class, 8L );
+			assertThat( entity.createdBy ).isEqualTo( "alice" );
+			assertThat( entity.lastModifiedBy ).isEqualTo( "bob" );
+		} );
+	}
+
+	//tag::mapping-generated-auditor-example[]
 	public static class TestCurrentAuditorResolver implements CurrentAuditorResolver<String> {
+		public TestCurrentAuditorResolver() {
+			RESOLVER_INSTANTIATIONS.incrementAndGet();
+		}
+
 		@Override
 		public String resolveCurrentAuditor() {
 			return CURRENT_AUDITOR.get();
@@ -184,6 +244,7 @@ public class CurrentAuditorGenerationTest {
 			this.name = name;
 		}
 	}
+	//end::mapping-generated-auditor-example[]
 
 	@MappedSuperclass
 	public abstract static class AuditedBase {
@@ -207,6 +268,58 @@ public class CurrentAuditorGenerationTest {
 		public InheritedAuditedEntity(Long id, String name) {
 			this.id = id;
 			this.name = name;
+		}
+	}
+
+	@Entity(name = "PropertyAccessAuditedEntity")
+	@Access(AccessType.PROPERTY)
+	public static class PropertyAccessAuditedEntity {
+		private Long id;
+		private String name;
+		private String createdBy;
+		private String lastModifiedBy;
+
+		public PropertyAccessAuditedEntity() {
+		}
+
+		public PropertyAccessAuditedEntity(Long id, String name) {
+			this.id = id;
+			this.name = name;
+		}
+
+		@Id
+		public Long getId() {
+			return id;
+		}
+
+		public void setId(Long id) {
+			this.id = id;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public void setName(String name) {
+			this.name = name;
+		}
+
+		@CreatedBy
+		public String getCreatedBy() {
+			return createdBy;
+		}
+
+		public void setCreatedBy(String createdBy) {
+			this.createdBy = createdBy;
+		}
+
+		@LastModifiedBy
+		public String getLastModifiedBy() {
+			return lastModifiedBy;
+		}
+
+		public void setLastModifiedBy(String lastModifiedBy) {
+			this.lastModifiedBy = lastModifiedBy;
 		}
 	}
 }

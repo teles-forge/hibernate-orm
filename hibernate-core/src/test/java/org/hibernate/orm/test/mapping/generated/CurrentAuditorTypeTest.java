@@ -4,6 +4,7 @@
  */
 package org.hibernate.orm.test.mapping.generated;
 
+import org.hibernate.PropertyValueException;
 import org.hibernate.annotations.CreatedBy;
 import org.hibernate.annotations.LastModifiedBy;
 import org.hibernate.cfg.StateManagementSettings;
@@ -21,8 +22,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DomainModel(annotatedClasses = CurrentAuditorTypeTest.AuditedEntity.class)
+@DomainModel(annotatedClasses = {
+		CurrentAuditorTypeTest.AuditedEntity.class,
+		CurrentAuditorTypeTest.WrongTypeAuditedEntity.class
+})
 @ServiceRegistry(settings = @Setting(
 		name = StateManagementSettings.CURRENT_AUDITOR_RESOLVER,
 		value = "org.hibernate.orm.test.mapping.generated.CurrentAuditorTypeTest$LongCurrentAuditorResolver"
@@ -54,6 +59,19 @@ public class CurrentAuditorTypeTest {
 		} );
 	}
 
+	@Test
+	void rejectsAuditorValueWithWrongPropertyType(SessionFactoryScope scope) {
+		CURRENT_AUDITOR.set( 101L );
+
+		assertThatThrownBy(
+				() -> scope.inTransaction( session -> session.persist( new WrongTypeAuditedEntity( 2L ) ) )
+		)
+				.isInstanceOf( PropertyValueException.class )
+				.hasMessageContaining( CurrentAuditorResolver.class.getSimpleName() )
+				.hasMessageContaining( "java.lang.Long" )
+				.hasMessageContaining( "java.lang.String" );
+	}
+
 	public static class LongCurrentAuditorResolver implements CurrentAuditorResolver<Long> {
 		@Override
 		public Long resolveCurrentAuditor() {
@@ -80,6 +98,22 @@ public class CurrentAuditorTypeTest {
 		public AuditedEntity(Long id, String name) {
 			this.id = id;
 			this.name = name;
+		}
+	}
+
+	@Entity(name = "WrongTypeAuditedEntity")
+	public static class WrongTypeAuditedEntity {
+		@Id
+		private Long id;
+
+		@CreatedBy
+		private String createdBy;
+
+		public WrongTypeAuditedEntity() {
+		}
+
+		public WrongTypeAuditedEntity(Long id) {
+			this.id = id;
 		}
 	}
 }

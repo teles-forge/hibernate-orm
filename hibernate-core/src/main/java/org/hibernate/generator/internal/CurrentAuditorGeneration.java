@@ -7,6 +7,7 @@ package org.hibernate.generator.internal;
 import java.util.EnumSet;
 
 import org.hibernate.MappingException;
+import org.hibernate.PropertyValueException;
 import org.hibernate.annotations.CreatedBy;
 import org.hibernate.annotations.LastModifiedBy;
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
@@ -16,6 +17,8 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.generator.BeforeExecutionGenerator;
 import org.hibernate.generator.EventType;
 import org.hibernate.generator.GeneratorCreationContext;
+import org.hibernate.internal.util.type.PrimitiveWrappers;
+import org.hibernate.resource.beans.spi.ManagedBeanRegistry;
 
 import static org.hibernate.cfg.StateManagementSettings.CURRENT_AUDITOR_RESOLVER;
 import static org.hibernate.generator.EventTypeSets.INSERT_AND_UPDATE;
@@ -28,9 +31,11 @@ import static org.hibernate.generator.EventTypeSets.INSERT_ONLY;
  * @since 8.1
  */
 public class CurrentAuditorGeneration implements BeforeExecutionGenerator {
-	private final CurrentAuditorResolver<?> resolver;
+	private final ResolverAccess resolverAccess;
 	private final EnumSet<EventType> eventTypes;
 	private final Class<?> propertyType;
+	private final String entityName;
+	private final String propertyName;
 
 	public CurrentAuditorGeneration(CreatedBy annotation, GeneratorCreationContext context) {
 		this( context, INSERT_ONLY );
@@ -43,9 +48,15 @@ public class CurrentAuditorGeneration implements BeforeExecutionGenerator {
 	private CurrentAuditorGeneration(
 			GeneratorCreationContext context,
 			EnumSet<EventType> eventTypes) {
-		this.resolver = resolveCurrentAuditorResolver( context );
+		resolverAccess = resolveCurrentAuditorResolver( context );
 		this.eventTypes = eventTypes;
-		this.propertyType = context.getType().getReturnedClass();
+		propertyType = context.getType().getReturnedClass();
+
+		final var persistentClass = context.getPersistentClass();
+		entityName = persistentClass != null
+				? persistentClass.getEntityName()
+				: context.getMemberDetails().toJavaMember().getDeclaringClass().getName();
+		propertyName = context.getProperty().getName();
 	}
 
 	@Override
@@ -54,8 +65,19 @@ public class CurrentAuditorGeneration implements BeforeExecutionGenerator {
 			Object owner,
 			Object currentValue,
 			EventType eventType) {
-		final Object auditor = resolver.resolveCurrentAuditor();
-		return auditor == null ? currentValue : auditor;
+		final Object auditor = resolverAccess.get().resolveCurrentAuditor();
+		if ( auditor == null ) {
+			return currentValue;
+		}
+		if ( !PrimitiveWrappers.isInstance( propertyType, auditor ) ) {
+			throw new PropertyValueException(
+					"CurrentAuditorResolver returned value of type '" + auditor.getClass().getTypeName()
+							+ "' which is not assignable to auditor property type '" + propertyType.getTypeName() + "'",
+					entityName,
+					propertyName
+			);
+		}
+		return auditor;
 	}
 
 	@Override
@@ -68,21 +90,50 @@ public class CurrentAuditorGeneration implements BeforeExecutionGenerator {
 		return propertyType;
 	}
 
-	private static CurrentAuditorResolver<?> resolveCurrentAuditorResolver(
-			GeneratorCreationContext context) {
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private static ResolverAccess resolveCurrentAuditorResolver(GeneratorCreationContext context) {
 		final var serviceRegistry = context.getServiceRegistry();
-		final var setting = serviceRegistry.requireService( ConfigurationService.class )
+		final Object setting = serviceRegistry.requireService( ConfigurationService.class )
 				.getSettings()
 				.get( CURRENT_AUDITOR_RESOLVER );
-		final var resolver = serviceRegistry.requireService( StrategySelector.class )
-				.resolveStrategy( CurrentAuditorResolver.class, setting );
-		if ( resolver == null ) {
+
+		if ( setting == null ) {
 			throw new MappingException(
 					"A CurrentAuditorResolver must be configured using '"
 							+ CURRENT_AUDITOR_RESOLVER
 							+ "' when using @CreatedBy or @LastModifiedBy"
 			);
 		}
-		return resolver;
+
+		if ( setting instanceof CurrentAuditorResolver<?> resolver ) {
+			return () -> resolver;
+		}
+
+		final Class<? extends CurrentAuditorResolver> resolverClass;
+		if ( setting instanceof Class<?> implementationClass ) {
+			try {
+				resolverClass = implementationClass.asSubclass( CurrentAuditorResolver.class );
+			}
+			catch (ClassCastException e) {
+				throw new MappingException(
+						"Configured current auditor resolver class '" + implementationClass.getName()
+								+ "' does not implement " + CurrentAuditorResolver.class.getName(),
+						e
+				);
+			}
+		}
+		else {
+			resolverClass = serviceRegistry.requireService( StrategySelector.class )
+					.selectStrategyImplementor( CurrentAuditorResolver.class, setting.toString() );
+		}
+
+		final var bean = serviceRegistry.requireService( ManagedBeanRegistry.class )
+				.getBootstrapSafeBean( resolverClass );
+		return () -> bean.getBeanInstance();
+	}
+
+	@FunctionalInterface
+	private interface ResolverAccess {
+		CurrentAuditorResolver<?> get();
 	}
 }
