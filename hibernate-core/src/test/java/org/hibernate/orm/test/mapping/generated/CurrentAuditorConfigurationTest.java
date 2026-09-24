@@ -17,6 +17,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hibernate.cfg.SchemaToolingSettings.HBM2DDL_AUTO;
 import static org.hibernate.cfg.StateManagementSettings.CURRENT_AUDITOR_RESOLVER;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,7 +29,7 @@ public class CurrentAuditorConfigurationTest {
 	void rejectsAuditorAnnotationWithoutResolver() {
 		final var exception = assertThrows(
 				MappingException.class,
-				() -> buildSessionFactory( AuditedEntity.class, null )
+				() -> buildSessionFactory( AuditedEntity.class, null, false )
 		);
 
 		assertThat( exception.getMessage() )
@@ -38,35 +39,52 @@ public class CurrentAuditorConfigurationTest {
 
 	@Test
 	void resolverMayBeConfiguredAsInstance() {
-		assertDoesNotThrow( () -> buildSessionFactory( AuditedEntity.class, new TestCurrentAuditorResolver() ) );
+		assertAuditingWorks( new TestCurrentAuditorResolver() );
 	}
 
 	@Test
 	void resolverMayBeConfiguredAsClass() {
-		assertDoesNotThrow( () -> buildSessionFactory( AuditedEntity.class, TestCurrentAuditorResolver.class ) );
+		assertAuditingWorks( TestCurrentAuditorResolver.class );
 	}
 
 	@Test
 	void resolverMayBeConfiguredAsClassName() {
-		assertDoesNotThrow( () -> buildSessionFactory( AuditedEntity.class, TestCurrentAuditorResolver.class.getName() ) );
+		assertAuditingWorks( TestCurrentAuditorResolver.class.getName() );
 	}
 
 	@Test
 	void resolverIsNotRequiredWithoutAuditorAnnotations() {
-		assertDoesNotThrow( () -> buildSessionFactory( PlainEntity.class, null ) );
+		assertDoesNotThrow( () -> buildSessionFactory( PlainEntity.class, null, false ) );
 	}
 
-	private static void buildSessionFactory(Class<?> annotatedClass, Object resolver) {
+	private static void assertAuditingWorks(Object resolver) {
+		buildSessionFactory( AuditedEntity.class, resolver, true );
+	}
+
+	private static void buildSessionFactory(Class<?> annotatedClass, Object resolver, boolean exerciseRuntime) {
 		final var builder = ServiceRegistryUtil.serviceRegistryBuilder();
 		if ( resolver != null ) {
 			builder.applySetting( CURRENT_AUDITOR_RESOLVER, resolver );
 		}
+		if ( exerciseRuntime ) {
+			builder.applySetting( HBM2DDL_AUTO, "create-drop" );
+		}
+
 		try ( var serviceRegistry = builder.build() ) {
 			try ( var sessionFactory = new MetadataSources( serviceRegistry )
 					.addAnnotatedClass( annotatedClass )
 					.buildMetadata()
 					.buildSessionFactory() ) {
 				assertThat( sessionFactory ).isOpen();
+
+				if ( exerciseRuntime ) {
+					sessionFactory.inTransaction( session -> {
+						final var entity = new AuditedEntity( 1L );
+						session.persist( entity );
+						session.flush();
+						assertThat( entity.createdBy ).isEqualTo( "auditor" );
+					} );
+				}
 			}
 		}
 	}
@@ -85,6 +103,13 @@ public class CurrentAuditorConfigurationTest {
 
 		@CreatedBy
 		private String createdBy;
+
+		public AuditedEntity() {
+		}
+
+		public AuditedEntity(Long id) {
+			this.id = id;
+		}
 	}
 
 	@Entity(name = "EntityWithoutAuditorAnnotations")
