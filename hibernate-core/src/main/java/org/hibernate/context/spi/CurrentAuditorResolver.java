@@ -19,6 +19,12 @@ import org.hibernate.cfg.StateManagementSettings;
  * make any assumption about where the auditor comes from. An implementation may
  * use a security context, a service account, a scheduled-job identity, or any
  * other application-specific source.
+ * <p>
+ * A resolver must be configured when using
+ * {@link org.hibernate.annotations.CreatedBy @CreatedBy} or
+ * {@link org.hibernate.annotations.LastModifiedBy @LastModifiedBy}. Returning
+ * {@code null} indicates that no auditor is available for the current operation,
+ * in which case the current property value is left unchanged.
  *
  * @param <T> the auditor type
  *

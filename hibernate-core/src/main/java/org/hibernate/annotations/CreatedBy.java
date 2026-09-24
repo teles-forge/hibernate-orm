@@ -20,7 +20,7 @@ import org.hibernate.generator.internal.CurrentAuditorGeneration;
  * Specifies that the annotated field or property is populated with the
  * {@linkplain CurrentAuditorResolver current auditor} when the entity is inserted.
  * <p>
- * The auditor source is configured using
+ * A {@link CurrentAuditorResolver} must be configured using
  * {@link StateManagementSettings#CURRENT_AUDITOR_RESOLVER}. If the resolver returns
  * {@code null}, the current value of the property is left unchanged.
  *
