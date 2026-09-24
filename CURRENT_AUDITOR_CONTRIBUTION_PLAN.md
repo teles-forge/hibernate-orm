@@ -101,6 +101,7 @@ https://github.com/teles-forge/hibernate-orm/tree/prototype/current-auditor
 Open design points I would like feedback on before finalizing the API:
 
 * whether CurrentAuditorResolver is the preferred name/package for the SPI;
+* whether hibernate.audit.current_auditor_resolver is the preferred setting name;
 * whether returning null should leave the current value unchanged;
 * whether missing resolver configuration should remain a bootstrap mapping error.
 
@@ -196,6 +197,8 @@ The resolver SPI is incubating and classified for IMPLEMENT and SUPPLY. The gene
 * No resolver is required when no audit annotations are used.
 * Resolver configuration accepts an instance, implementation Class, or implementation class name.
 * Class-based resolver lifecycle is managed/reused through ManagedBeanRegistry.
+* Resolver implementations are shared at session-factory scope and must be thread-safe.
+* A resolver instance supplied directly remains application-owned.
 * String is not special; a Long auditor is tested.
 * A resolver value incompatible with the annotated property's Java type fails with a PropertyValueException.
 * Field access is covered.

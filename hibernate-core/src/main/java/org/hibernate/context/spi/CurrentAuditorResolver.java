@@ -23,9 +23,14 @@ import static org.hibernate.SPI.Role.SUPPLY;
  * use a security context, a service account, a scheduled-job identity, or any
  * other application-specific source.
  * <p>
+ * A resolver may be shared by all sessions of a session factory and invoked concurrently.
+ * Implementations must therefore be thread-safe and should resolve operation-specific
+ * context on each invocation instead of storing mutable session or request state.
+ * <p>
  * When a resolver implementation is configured by class or class name, Hibernate
  * acquires it through the managed bean registry and reuses the managed instance.
- * Supplying a resolver instance uses that instance directly.
+ * Supplying a resolver instance uses that instance directly and leaves its lifecycle
+ * under the control of the application.
  * <p>
  * A resolver must be configured when using
  * {@link org.hibernate.annotations.CreatedBy @CreatedBy} or
@@ -41,6 +46,7 @@ import static org.hibernate.SPI.Role.SUPPLY;
  *
  * @since 8.1
  */
+@FunctionalInterface
 @Incubating(since = "8.1")
 @SPI({ IMPLEMENT, SUPPLY })
 public interface CurrentAuditorResolver<T> {
