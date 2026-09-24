@@ -5,7 +5,6 @@
 package org.hibernate.orm.test.mapping.generated;
 
 import org.hibernate.MappingException;
-import org.hibernate.SharedSessionContract;
 import org.hibernate.annotations.CreatedBy;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.context.spi.CurrentAuditorResolver;
@@ -74,7 +73,7 @@ public class CurrentAuditorConfigurationTest {
 
 	public static class TestCurrentAuditorResolver implements CurrentAuditorResolver<String> {
 		@Override
-		public String resolveCurrentAuditor(SharedSessionContract session) {
+		public String resolveCurrentAuditor() {
 			return "auditor";
 		}
 	}

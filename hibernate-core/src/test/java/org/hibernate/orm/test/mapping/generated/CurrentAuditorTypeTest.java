@@ -4,7 +4,6 @@
  */
 package org.hibernate.orm.test.mapping.generated;
 
-import org.hibernate.SharedSessionContract;
 import org.hibernate.annotations.CreatedBy;
 import org.hibernate.annotations.LastModifiedBy;
 import org.hibernate.cfg.StateManagementSettings;
@@ -57,7 +56,7 @@ public class CurrentAuditorTypeTest {
 
 	public static class LongCurrentAuditorResolver implements CurrentAuditorResolver<Long> {
 		@Override
-		public Long resolveCurrentAuditor(SharedSessionContract session) {
+		public Long resolveCurrentAuditor() {
 			return CURRENT_AUDITOR.get();
 		}
 	}

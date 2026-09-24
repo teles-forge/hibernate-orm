@@ -54,7 +54,7 @@ public class CurrentAuditorGeneration implements BeforeExecutionGenerator {
 			Object owner,
 			Object currentValue,
 			EventType eventType) {
-		final Object auditor = resolver.resolveCurrentAuditor( session );
+		final Object auditor = resolver.resolveCurrentAuditor();
 		return auditor == null ? currentValue : auditor;
 	}
 

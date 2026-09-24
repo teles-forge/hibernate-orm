@@ -8,7 +8,6 @@ import jakarta.annotation.Nullable;
 
 import org.hibernate.Incubating;
 import org.hibernate.SPI;
-import org.hibernate.SharedSessionContract;
 import org.hibernate.cfg.StateManagementSettings;
 
 import static org.hibernate.SPI.Role.IMPLEMENT;
@@ -45,9 +44,8 @@ public interface CurrentAuditorResolver<T> {
 	/**
 	 * Resolve the auditor associated with the current persistence operation.
 	 *
-	 * @param session the current session
 	 * @return the current auditor, or {@code null} if no auditor is available
 	 */
 	@Nullable
-	T resolveCurrentAuditor(SharedSessionContract session);
+	T resolveCurrentAuditor();
 }
