@@ -124,6 +124,25 @@ public class CurrentAuditorGenerationTest {
 	}
 
 	@Test
+	void createdByCannotBeMutatedAfterInsert(SessionFactoryScope scope) {
+		CURRENT_AUDITOR.set( "alice" );
+		scope.inTransaction( session -> session.persist( new AuditedEntity( 9L, "initial" ) ) );
+
+		CURRENT_AUDITOR.set( "bob" );
+		scope.inTransaction( session -> {
+			final var entity = session.find( AuditedEntity.class, 9L );
+			entity.createdBy = "manual-change";
+			entity.name = "updated";
+		} );
+
+		scope.inTransaction( session -> {
+			final var entity = session.find( AuditedEntity.class, 9L );
+			assertThat( entity.createdBy ).isEqualTo( "alice" );
+			assertThat( entity.lastModifiedBy ).isEqualTo( "bob" );
+		} );
+	}
+
+	@Test
 	void noOpFlushDoesNotModifyAuditor(SessionFactoryScope scope) {
 		CURRENT_AUDITOR.set( "alice" );
 		scope.inTransaction( session -> session.persist( new AuditedEntity( 4L, "initial" ) ) );

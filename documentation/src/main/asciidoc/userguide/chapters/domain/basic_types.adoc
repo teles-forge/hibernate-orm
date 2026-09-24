@@ -2581,6 +2581,8 @@ current operation and leaves the current property value unchanged. Hibernate doe
 such as `system` or `anonymous`.
 
 When a non-null auditor is available, it replaces any explicitly assigned value for the generated property.
+After insertion, a `@CreatedBy` property is treated as generated state and application changes to that property
+are not persisted.
 
 
 [[mapping-generated-Generated]]

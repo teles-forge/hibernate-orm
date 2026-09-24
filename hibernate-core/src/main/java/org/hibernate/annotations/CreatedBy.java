@@ -23,6 +23,9 @@ import org.hibernate.generator.internal.CurrentAuditorGeneration;
  * A {@link CurrentAuditorResolver} must be configured using
  * {@link StateManagementSettings#CURRENT_AUDITOR_RESOLVER}. If the resolver returns
  * {@code null}, the current value of the property is left unchanged.
+ * <p>
+ * After insertion, the annotated property is treated as generated state and is not
+ * mutable by the application.
  *
  * @see LastModifiedBy
  * @see CurrentAuditorResolver
